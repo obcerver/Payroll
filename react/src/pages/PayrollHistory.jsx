@@ -18,15 +18,14 @@ import PayrollService from '../services/PayrollService';
 import toast from 'react-hot-toast';
 
 const PayrollHistory = () => {
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState({ data: [], total: 0, last_page: 1 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
-  const itemsPerPage = 10;
+  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -34,17 +33,25 @@ const PayrollHistory = () => {
   ];
 
   useEffect(() => {
-    fetchHistory();
-  }, [monthFilter, yearFilter]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchHistory();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [currentPage, sortConfig, searchTerm, monthFilter, yearFilter]);
 
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const data = await PayrollService.getHistory({ 
+      const response = await PayrollService.getHistory({ 
+        page: currentPage,
+        sort_by: sortConfig.key,
+        order: sortConfig.direction,
         month: monthFilter, 
-        year: yearFilter 
+        year: yearFilter,
+        search: searchTerm
       });
-      setHistory(data);
+      setHistory(response);
     } catch (err) {
       console.error('Failed to fetch history', err);
     } finally {
@@ -58,49 +65,14 @@ const PayrollHistory = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+    setCurrentPage(1);
   };
 
-  const sortedAndFilteredHistory = useMemo(() => {
-    let result = history.filter(record => 
-      record.employee?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (sortConfig.key) {
-      result.sort((a, b) => {
-        let valA, valB;
-
-        switch (sortConfig.key) {
-          case 'name':
-            valA = a.employee?.name || '';
-            valB = b.employee?.name || '';
-            break;
-          case 'period':
-            valA = a.year * 12 + Number(a.month);
-            valB = b.year * 12 + Number(b.month);
-            break;
-          case 'net_pay':
-            valA = Number(a.net_pay);
-            valB = Number(b.net_pay);
-            break;
-          default:
-            valA = a[sortConfig.key];
-            valB = b[sortConfig.key];
-        }
-
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [history, searchTerm, sortConfig]);
-
-  const totalPages = Math.ceil(sortedAndFilteredHistory.length / itemsPerPage);
-  const paginatedData = sortedAndFilteredHistory.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedData = history.data || [];
+  const totalPages = history.last_page || 1;
+  const totalItems = history.total || 0;
+  const fromItem = history.from || 0;
+  const toItem = history.to || 0;
 
   const SortIcon = ({ column }) => {
     if (sortConfig.key !== column) return <ArrowUpDown size={14} className="opacity-30" />;
@@ -115,8 +87,8 @@ const PayrollHistory = () => {
       }),
       {
         loading: `Preparing payslip for ${name}...`,
-        success: 'PDF Downloaded!',
-        error: 'Failed to download PDF',
+        success: 'PDF Opened!',
+        error: 'Failed to open PDF',
       }
     );
   };
@@ -144,7 +116,7 @@ const PayrollHistory = () => {
         </div>
         <button 
           onClick={handleExportCsv}
-          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-emerald-500/20"
+          className="flex items-center justify-center gap-2 bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 px-6 py-3 rounded-2xl font-bold transition-all shadow-lg"
         >
           <Download size={20} />
           Export CSV
@@ -253,7 +225,7 @@ const PayrollHistory = () => {
 
         <div className="p-4 md:p-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs md:text-sm text-slate-500 font-medium">
-            Showing <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white">{Math.min(currentPage * itemsPerPage, sortedAndFilteredHistory.length)}</span> of <span className="text-white">{sortedAndFilteredHistory.length}</span> records
+            Showing <span className="text-white">{fromItem}</span> to <span className="text-white">{toItem}</span> of <span className="text-white">{totalItems}</span> records
           </p>
           <div className="flex items-center gap-2">
             <button 
@@ -326,20 +298,28 @@ const PayrollHistory = () => {
                     <span>Overtime Pay</span>
                     <span className="font-mono text-white">${Number(selectedRecord.overtime_pay).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-red-400 pt-2 border-t border-slate-800/50">
+                  <div className="flex justify-between text-primary-400 font-bold pt-2 border-t border-slate-800/50">
+                    <span>Gross Pay</span>
+                    <span className="font-mono">${Number(selectedRecord.gross_pay).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-red-400">
                     <span>Income Tax (8%)</span>
                     <span className="font-mono">-${Number(selectedRecord.tax).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-red-400">
-                    <span>EPF Contribution (11%)</span>
+                    <span>EPF Contribution (Employee 11%)</span>
                     <span className="font-mono">-${Number(selectedRecord.epf_employee).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-400 italic">
+                    <span>EPF Contribution (Employer 13%)</span>
+                    <span className="font-mono">${Number(selectedRecord.epf_employer).toLocaleString()}</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-3">
                   <button 
                     onClick={() => handleExportPdf(selectedRecord.id, selectedRecord.employee?.name)}
-                    className="flex-1 bg-white text-slate-900 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-primary-50 transition-all"
+                    className="flex-1 bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg"
                   >
                     <Download size={20} />
                     Download PDF

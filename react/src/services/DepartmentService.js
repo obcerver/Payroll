@@ -2,8 +2,8 @@ import api from '../api/axios';
 import { ENDPOINTS } from '../api/Define';
 
 const DepartmentService = {
-  getAll: async () => {
-    const response = await api.get(ENDPOINTS.DEPARTMENTS);
+  getAll: async (params = {}) => {
+    const response = await api.get(ENDPOINTS.DEPARTMENTS, { params });
     return response.data;
   },
   getById: async (id) => {

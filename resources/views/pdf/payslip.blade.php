@@ -4,15 +4,17 @@
     <meta charset="utf-8">
     <title>Payslip - {{ $record->employee->name }}</title>
     <style>
+        @page {
+            margin: 1cm;
+        }
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
             color: #333;
             line-height: 1.6;
+            margin: 0;
+            padding: 0;
         }
         .container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
             border: 1px solid #eee;
             padding: 30px;
         }
@@ -141,7 +143,6 @@
 
         <div class="footer">
             <p>This is a computer-generated payslip and no signature is required.</p>
-            <p>&copy; {{ date('Y') }} {{ config('app.name') }}</p>
         </div>
     </div>
 </body>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  Users, 
-  CreditCard, 
-  TrendingUp, 
+import {
+  Building2,
+  Users,
+  CreditCard,
+  TrendingUp,
   ChevronRight,
   Loader2
 } from 'lucide-react';
@@ -53,9 +53,9 @@ const Dashboard = () => {
           PayrollService.getHistory(),
         ]);
         setStats({
-          departments: depts.length,
-          employees: emps.length,
-          payrollRecords: payroll.length,
+          departments: depts.total || 0,
+          employees: emps.total || 0,
+          payrollRecords: payroll.total || 0,
         });
       } catch (error) {
         console.error('Failed to fetch stats', error);
@@ -82,58 +82,31 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          title="Total Departments" 
-          value={stats.departments} 
-          icon={Building2} 
+        <StatCard
+          title="Total Departments"
+          value={stats.departments}
+          icon={Building2}
           color="bg-blue-500 text-blue-500"
           delay={0.1}
         />
-        <StatCard 
-          title="Total Employees" 
-          value={stats.employees} 
-          icon={Users} 
+        <StatCard
+          title="Total Employees"
+          value={stats.employees}
+          icon={Users}
           color="bg-purple-500 text-purple-500"
           delay={0.2}
         />
-        <StatCard 
-          title="Payroll Records" 
-          value={stats.payrollRecords} 
-          icon={CreditCard} 
+        <StatCard
+          title="Payroll Records"
+          value={stats.payrollRecords}
+          icon={CreditCard}
           color="bg-emerald-500 text-emerald-500"
           delay={0.3}
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {/* Recent Activity or Chart Placeholders */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">System Status</h3>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">Active</span>
-          </div>
-          <div className="space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center group-hover:bg-primary-500/20 transition-colors">
-                  <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse"></div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-slate-200">Database Synchronization</p>
-                  <p className="text-xs text-slate-500">Last checked 2 minutes ago</p>
-                </div>
-                <ChevronRight size={16} className="text-slate-600 group-hover:text-primary-400 transition-colors" />
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div 
+      <div className="mt-8">
+        <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.5 }}
@@ -143,9 +116,9 @@ const Dashboard = () => {
             <h3 className="text-xl font-bold text-white mb-2">Ready to run payroll?</h3>
             <p className="text-slate-400 text-sm mb-6">Process all employee salaries for the current month with just one click.</p>
           </div>
-          <button 
+          <button
             onClick={() => window.location.href = '/run-payroll'}
-            className="w-full bg-white text-slate-900 font-bold py-4 rounded-2xl hover:bg-primary-50 hover:scale-[1.02] transition-all"
+            className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-4 rounded-2xl hover:scale-[1.02] transition-all"
           >
             Go to Payroll Engine
           </button>

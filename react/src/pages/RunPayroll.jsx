@@ -92,7 +92,7 @@ const RunPayroll = () => {
 
           <button 
             onClick={() => setShowConfirm(true)}
-            className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-bold py-5 rounded-2xl shadow-xl shadow-primary-500/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+            className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
           >
             <PlayCircle size={24} />
             Start Processing
@@ -184,7 +184,7 @@ const RunPayroll = () => {
                   <button 
                     disabled={loading}
                     onClick={handleRunPayroll}
-                    className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="animate-spin" /> : 'Yes, Process Now'}
                   </button>

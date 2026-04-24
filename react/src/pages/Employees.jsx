@@ -20,7 +20,7 @@ import DepartmentService from '../services/DepartmentService';
 import toast from 'react-hot-toast';
 
 const Employees = () => {
-  const [employees, setEmployees] = useState([]);
+  const [employees, setEmployees] = useState({ data: [], total: 0, last_page: 1 });
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,8 +30,8 @@ const Employees = () => {
   const [editingEmp, setEditingEmp] = useState(null);
   const [error, setError] = useState('');
   const [isDeleting, setIsDeleting] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
-  const itemsPerPage = 10;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,18 +44,37 @@ const Employees = () => {
   });
 
   useEffect(() => {
-    fetchData();
+    fetchDepartments();
   }, []);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchEmployees();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [currentPage, sortConfig, searchTerm, deptFilter]);
+
+  const fetchDepartments = async () => {
+    try {
+      const data = await DepartmentService.getAll();
+      setDepartments(data.data || data); // Handle both paginated and non-paginated
+    } catch (err) {
+      toast.error('Failed to load departments');
+    }
+  };
+
+  const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const [empData, deptData] = await Promise.all([
-        EmployeeService.getAll(),
-        DepartmentService.getAll(),
-      ]);
-      setEmployees(empData);
-      setDepartments(deptData);
+      const response = await EmployeeService.getAll({
+        page: currentPage,
+        sort_by: sortConfig.key,
+        order: sortConfig.direction,
+        department_id: deptFilter,
+        search: searchTerm
+      });
+      setEmployees(response);
     } catch (err) {
       toast.error('Failed to load employee data');
     } finally {
@@ -69,43 +88,14 @@ const Employees = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+    setCurrentPage(1);
   };
 
-  const sortedAndFilteredEmployees = useMemo(() => {
-    let result = employees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            emp.position.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesDept = deptFilter === '' || emp.department_id.toString() === deptFilter;
-      return matchesSearch && matchesDept;
-    });
-
-    if (sortConfig.key) {
-      result.sort((a, b) => {
-        let valA = a[sortConfig.key];
-        let valB = b[sortConfig.key];
-
-        if (sortConfig.key === 'department') {
-          valA = a.department?.name || '';
-          valB = b.department?.name || '';
-        } else if (['basic_salary', 'allowance', 'hour_rate'].includes(sortConfig.key)) {
-          valA = Number(valA);
-          valB = Number(valB);
-        }
-
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [employees, searchTerm, deptFilter, sortConfig]);
-
-  const totalPages = Math.ceil(sortedAndFilteredEmployees.length / itemsPerPage);
-  const paginatedData = sortedAndFilteredEmployees.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedData = employees.data || [];
+  const totalPages = employees.last_page || 1;
+  const totalItems = employees.total || 0;
+  const fromItem = employees.from || 0;
+  const toItem = employees.to || 0;
 
   const SortIcon = ({ column }) => {
     if (sortConfig.key !== column) return <ArrowUpDown size={14} className="opacity-30" />;
@@ -115,6 +105,7 @@ const Employees = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     const toastId = toast.loading(editingEmp ? 'Updating...' : 'Adding...');
     try {
       if (editingEmp) {
@@ -127,11 +118,13 @@ const Employees = () => {
       setIsModalOpen(false);
       setEditingEmp(null);
       resetForm();
-      fetchData();
+      fetchEmployees();
     } catch (err) {
       const msg = err.response?.data?.message || 'Action failed';
       setError(msg);
       toast.error(msg, { id: toastId });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,7 +134,7 @@ const Employees = () => {
       await EmployeeService.delete(id);
       toast.success('Employee removed!', { id: toastId });
       setIsDeleting(null);
-      fetchData();
+      fetchEmployees();
     } catch (err) {
       const msg = err.response?.data?.message || 'Delete failed';
       toast.error(msg, { id: toastId });
@@ -184,7 +177,7 @@ const Employees = () => {
         </div>
         <button 
           onClick={() => { setEditingEmp(null); resetForm(); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-primary-500/20"
+          className="flex items-center justify-center gap-2 bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 px-6 py-3 rounded-2xl font-bold transition-all hover:scale-105 shadow-lg"
         >
           <Plus size={20} />
           Add Employee
@@ -285,7 +278,7 @@ const Employees = () => {
 
         <div className="p-4 md:p-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-slate-500 font-medium">
-            Showing <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white">{Math.min(currentPage * itemsPerPage, sortedAndFilteredEmployees.length)}</span> of <span className="text-white">{sortedAndFilteredEmployees.length}</span>
+            Showing <span className="text-white">{fromItem}</span> to <span className="text-white">{toItem}</span> of <span className="text-white">{totalItems}</span>
           </p>
           <div className="flex items-center gap-2">
             <button 
@@ -350,7 +343,7 @@ const Employees = () => {
                   </div>
                 </div>
 
-                <button type="submit" className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/20 transition-all">
+                <button type="submit" className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-4 rounded-2xl shadow-lg transition-all">
                   {editingEmp ? 'Save Changes' : 'Add Employee'}
                 </button>
               </form>
@@ -371,7 +364,7 @@ const Employees = () => {
               <h3 className="text-xl font-bold text-white mb-2">Remove Employee?</h3>
               <p className="text-slate-400 text-sm mb-8">Are you sure you want to remove <span className="text-white font-bold">{isDeleting.name}</span>? All history remains in records.</p>
               <div className="flex flex-col gap-3">
-                <button onClick={() => handleDelete(isDeleting.id)} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-2xl transition-all">Yes, Remove</button>
+                <button onClick={() => handleDelete(isDeleting.id)} className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-3.5 rounded-2xl transition-all">Yes, Remove</button>
                 <button onClick={() => setIsDeleting(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-2xl transition-all">Cancel</button>
               </div>
             </motion.div>

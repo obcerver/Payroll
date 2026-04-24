@@ -10,7 +10,8 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -30,6 +31,7 @@ const Layout = ({ children }) => {
     { to: '/employees', icon: Users, label: 'Employees' },
     { to: '/run-payroll', icon: PlayCircle, label: 'Run Payroll' },
     { to: '/payroll-history', icon: History, label: 'Payroll History' },
+    { to: '/register', icon: UserPlus, label: 'Add User' },
   ];
 
   const SidebarContent = () => (
@@ -74,7 +76,7 @@ const Layout = ({ children }) => {
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors duration-300"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold transition-all duration-300 shadow-lg"
         >
           <LogOut size={20} />
           <span className="font-medium">Logout</span>

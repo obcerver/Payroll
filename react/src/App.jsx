@@ -21,7 +21,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+
           
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Layout><Dashboard /></Layout>} />
@@ -29,6 +29,7 @@ function App() {
             <Route path="/employees" element={<Layout><Employees /></Layout>} />
             <Route path="/run-payroll" element={<Layout><RunPayroll /></Layout>} />
             <Route path="/payroll-history" element={<Layout><PayrollHistory /></Layout>} />
+            <Route path="/register" element={<Layout><Register /></Layout>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

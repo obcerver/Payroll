@@ -16,6 +16,10 @@ class PayrollRecordController extends Controller
      */
     public function index(Request $request)
     {
+        $sortBy = $request->get('sort_by', 'created_at');
+        $order = $request->get('order', 'desc');
+        $perPage = $request->get('per_page', 10);
+
         $query = PayrollRecord::with(['employee.department']);
 
         if ($request->has('year')) {
@@ -26,13 +30,20 @@ class PayrollRecordController extends Controller
             $query->where('employee_id', $request->employee_id);
         }
 
-        if ($request->has('department_id')) {
+        if ($request->has('department_id') && $request->department_id) {
             $query->whereHas('employee', function ($q) use ($request) {
                 $q->where('department_id', $request->department_id);
             });
         }
 
-        $records = $query->latest()->get();
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->whereHas('employee', function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%");
+            });
+        }
+
+        $records = $query->orderBy($sortBy, $order)->paginate($perPage);
 
         return response()->json($records);
     }
@@ -127,7 +138,7 @@ class PayrollRecordController extends Controller
 
         $pdf = Pdf::loadView('pdf.payslip', compact('record'));
         
-        return $pdf->download('payslip-' . $record->employee->name . '-' . $record->month . '-' . $record->year . '.pdf');
+        return $pdf->stream('payslip-' . $record->employee->name . '-' . $record->month . '-' . $record->year . '.pdf');
     }
 
     /**

@@ -12,9 +12,21 @@ class DepartmentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $departments = Department::withCount('employees')->get();
+        $sortBy = $request->get('sort_by', 'id');
+        $order = $request->get('order', 'asc');
+        $perPage = $request->get('per_page', 10);
+
+        $query = Department::withCount('employees');
+
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        $departments = $query->orderBy($sortBy, $order)
+            ->paginate($perPage);
+
         return response()->json($departments);
     }
 

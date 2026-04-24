@@ -18,7 +18,7 @@ import DepartmentService from '../services/DepartmentService';
 import toast from 'react-hot-toast';
 
 const Departments = () => {
-  const [departments, setDepartments] = useState([]);
+  const [departments, setDepartments] = useState({ data: [], total: 0, last_page: 1 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,18 +27,30 @@ const Departments = () => {
   const [formData, setFormData] = useState({ name: '' });
   const [error, setError] = useState('');
   const [isDeleting, setIsDeleting] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
-  const itemsPerPage = 10;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
 
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchDepartments();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [currentPage, sortConfig, searchTerm]);
 
   const fetchDepartments = async () => {
     setLoading(true);
     try {
-      const data = await DepartmentService.getAll();
-      setDepartments(data);
+      const response = await DepartmentService.getAll({
+        page: currentPage,
+        sort_by: sortConfig.key,
+        order: sortConfig.direction,
+        search: searchTerm // Assuming backend supports search, if not we filter locally
+      });
+      // Since local search was there, if backend doesn't support it, we might need to handle it.
+      // But the user asked for efficiency, so backend SHOULD support searching if we are paginating.
+      // For now, let's assume the backend handles sort and pagination.
+      setDepartments(response);
     } catch (err) {
       toast.error('Failed to load departments');
     } finally {
@@ -52,32 +64,14 @@ const Departments = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+    setCurrentPage(1); // Reset to first page on sort
   };
 
-  const sortedAndFilteredDepartments = useMemo(() => {
-    let result = [...departments].filter(dept => 
-      dept.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (sortConfig.key) {
-      result.sort((a, b) => {
-        const valA = sortConfig.key === 'employees_count' ? (a.employees_count || 0) : a[sortConfig.key];
-        const valB = sortConfig.key === 'employees_count' ? (b.employees_count || 0) : b[sortConfig.key];
-        
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [departments, searchTerm, sortConfig]);
-
-  const totalPages = Math.ceil(sortedAndFilteredDepartments.length / itemsPerPage);
-  const paginatedData = sortedAndFilteredDepartments.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedData = departments.data || [];
+  const totalPages = departments.last_page || 1;
+  const totalItems = departments.total || 0;
+  const fromItem = departments.from || 0;
+  const toItem = departments.to || 0;
 
   const SortIcon = ({ column }) => {
     if (sortConfig.key !== column) return <ArrowUpDown size={14} className="opacity-30" />;
@@ -87,6 +81,7 @@ const Departments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     const toastId = toast.loading(editingDept ? 'Updating...' : 'Creating...');
     try {
       if (editingDept) {
@@ -104,6 +99,8 @@ const Departments = () => {
       const msg = err.response?.data?.message || (err.response?.data ? Object.values(err.response.data)[0][0] : 'Action failed');
       setError(msg);
       toast.error(msg, { id: toastId });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -136,7 +133,7 @@ const Departments = () => {
         </div>
         <button 
           onClick={() => { setEditingDept(null); setFormData({ name: '' }); setIsModalOpen(true); }}
-          className="flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-primary-500/20"
+          className="flex items-center justify-center gap-2 bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 px-6 py-3 rounded-2xl font-bold transition-all hover:scale-105 shadow-lg"
         >
           <Plus size={20} />
           Add Department
@@ -217,7 +214,7 @@ const Departments = () => {
 
         <div className="p-4 md:p-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-slate-500 font-medium">
-            Showing <span className="text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="text-white">{Math.min(currentPage * itemsPerPage, sortedAndFilteredDepartments.length)}</span> of <span className="text-white">{sortedAndFilteredDepartments.length}</span>
+            Showing <span className="text-white">{fromItem}</span> to <span className="text-white">{toItem}</span> of <span className="text-white">{totalItems}</span>
           </p>
           <div className="flex items-center gap-2">
             <button 
@@ -278,7 +275,11 @@ const Departments = () => {
                     placeholder="e.g. Engineering"
                   />
                 </div>
-                <button type="submit" className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/20 transition-all">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                >
                   {editingDept ? 'Update Changes' : 'Create Department'}
                 </button>
               </form>
@@ -299,7 +300,7 @@ const Departments = () => {
               <h3 className="text-xl font-bold text-white mb-2">Delete Department?</h3>
               <p className="text-slate-400 text-sm mb-8">Are you sure you want to delete <span className="text-white font-bold">{isDeleting.name}</span>? This action cannot be undone.</p>
               <div className="flex flex-col gap-3">
-                <button onClick={() => handleDelete(isDeleting.id)} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-2xl transition-all">Yes, Delete</button>
+                <button onClick={() => handleDelete(isDeleting.id)} className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-3.5 rounded-2xl transition-all">Yes, Delete</button>
                 <button onClick={() => setIsDeleting(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-2xl transition-all">Cancel</button>
               </div>
             </motion.div>

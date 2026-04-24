@@ -14,13 +14,25 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
+        $sortBy = $request->get('sort_by', 'id');
+        $order = $request->get('order', 'asc');
+        $perPage = $request->get('per_page', 10);
+
         $query = Employee::with('department');
 
-        if ($request->has('department_id')) {
+        if ($request->has('department_id') && $request->department_id) {
             $query->where('department_id', $request->department_id);
         }
 
-        $employees = $query->get();
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('position', 'like', "%$search%");
+            });
+        }
+
+        $employees = $query->orderBy($sortBy, $order)->paginate($perPage);
         return response()->json($employees);
     }
 
@@ -107,6 +119,11 @@ class EmployeeController extends Controller
 
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+        // Check if employee has payroll records before deleting
+        if ($employee->payrollRecords()->count() > 0) {
+            return response()->json(['message' => 'Cannot delete employee with existing payroll history'], 400);
         }
 
         $employee->delete();

@@ -22,6 +22,10 @@ const PayrollService = {
     const token = sessionStorage.getItem('token');
     window.open(`${API_BASE_URL}${ENDPOINTS.EXPORT_PDF(id)}?token=${token}`, '_blank');
   },
+  getStats: async () => {
+    const response = await api.get(ENDPOINTS.PAYROLL_STATS);
+    return response.data;
+  },
 };
 
 export default PayrollService;

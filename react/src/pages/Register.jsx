@@ -141,13 +141,6 @@ const Register = () => {
               {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
             </button>
           </form>
-
-          <p className="text-center mt-8 text-slate-400 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">
-              Sign In
-            </Link>
-          </p>
         </div>
       </motion.div>
     </div>

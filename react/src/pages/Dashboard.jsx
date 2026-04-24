@@ -41,21 +41,19 @@ const Dashboard = () => {
     departments: 0,
     employees: 0,
     payrollRecords: 0,
+    latest_run: null,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [depts, emps, payroll] = await Promise.all([
-          DepartmentService.getAll(),
-          EmployeeService.getAll(),
-          PayrollService.getHistory(),
-        ]);
+        const data = await PayrollService.getStats();
         setStats({
-          departments: depts.total || 0,
-          employees: emps.total || 0,
-          payrollRecords: payroll.total || 0,
+          departments: data.total_departments,
+          employees: data.total_employees,
+          payrollRecords: data.total_payroll_records,
+          latest_run: data.latest_run,
         });
       } catch (error) {
         console.error('Failed to fetch stats', error);
@@ -65,6 +63,10 @@ const Dashboard = () => {
     };
     fetchStats();
   }, []);
+
+  const getMonthName = (monthNumber) => {
+    return new Date(0, monthNumber - 1).toLocaleString('default', { month: 'long' });
+  };
 
   if (loading) {
     return (
@@ -105,7 +107,45 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white">Latest Payroll Run</h3>
+            <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Completed</span>
+          </div>
+          
+          {stats.latest_run ? (
+            <div className="space-y-6">
+              <div className="flex items-center gap-6">
+                <div className="bg-slate-800 p-4 rounded-2xl">
+                  <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">Period</p>
+                  <p className="text-white font-bold">{getMonthName(stats.latest_run.month)} {stats.latest_run.year}</p>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-2xl flex-1">
+                  <p className="text-slate-500 text-[10px] uppercase font-bold mb-1">Employees Processed</p>
+                  <p className="text-white font-bold text-2xl">{stats.latest_run.count}</p>
+                </div>
+              </div>
+              <div className="p-4 bg-primary-500/5 border border-primary-500/10 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="text-primary-400" size={20} />
+                  <span className="text-slate-300 text-sm">Monthly generation successful</span>
+                </div>
+                <ChevronRight className="text-slate-600" size={20} />
+              </div>
+            </div>
+          ) : (
+            <div className="py-10 text-center">
+              <p className="text-slate-500 italic">No payroll records found</p>
+            </div>
+          )}
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}

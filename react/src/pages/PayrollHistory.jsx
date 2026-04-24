@@ -22,7 +22,7 @@ const PayrollHistory = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
-  const [yearFilter, setYearFilter] = useState(new Date().getFullYear());
+  const [yearFilter, setYearFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
@@ -149,6 +149,7 @@ const PayrollHistory = () => {
             </div>
             <input 
               type="number" 
+              placeholder="Year"
               value={yearFilter}
               onChange={(e) => { setYearFilter(e.target.value); setCurrentPage(1); }}
               className="bg-slate-800/50 border border-slate-700 text-slate-300 px-4 py-2.5 rounded-xl w-24 outline-none focus:ring-2 focus:ring-primary-500/50 text-sm"

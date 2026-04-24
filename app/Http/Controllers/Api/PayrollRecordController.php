@@ -8,6 +8,7 @@ use App\Models\PayrollRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 
 class PayrollRecordController extends Controller
 {
@@ -22,8 +23,12 @@ class PayrollRecordController extends Controller
 
         $query = PayrollRecord::with(['employee.department']);
 
-        if ($request->has('year')) {
+        if ($request->has('year') && $request->year) {
             $query->where('year', $request->year);
+        }
+
+        if ($request->has('month') && $request->month) {
+            $query->where('month', $request->month);
         }
 
         if ($request->has('employee_id')) {
@@ -43,7 +48,17 @@ class PayrollRecordController extends Controller
             });
         }
 
-        $records = $query->orderBy($sortBy, $order)->paginate($perPage);
+        if ($sortBy === 'name') {
+            $query->join('employees', 'payroll_records.employee_id', '=', 'employees.id')
+                  ->orderBy('employees.name', $order)
+                  ->select('payroll_records.*');
+        } elseif ($sortBy === 'period') {
+            $query->orderBy('year', $order)->orderBy('month', $order);
+        } else {
+            $query->orderBy($sortBy, $order);
+        }
+
+        $records = $query->paginate($perPage);
 
         return response()->json($records);
     }
@@ -148,8 +163,8 @@ class PayrollRecordController extends Controller
     {
         $query = PayrollRecord::with(['employee.department']);
 
-        if ($request->has('month')) $query->where('month', $request->month);
-        if ($request->has('year')) $query->where('year', $request->year);
+        if ($request->has('month') && $request->month) $query->where('month', $request->month);
+        if ($request->has('year') && $request->year) $query->where('year', $request->year);
 
         $records = $query->get();
 
@@ -181,5 +196,24 @@ class PayrollRecordController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Get dashboard statistics.
+     */
+    public function getStats()
+    {
+        $latestRun = PayrollRecord::select('month', 'year', DB::raw('count(*) as count'))
+            ->groupBy('month', 'year')
+            ->orderBy('year', 'desc')
+            ->orderBy('month', 'desc')
+            ->first();
+
+        return response()->json([
+            'total_departments' => \App\Models\Department::count(),
+            'total_employees' => \App\Models\Employee::count(),
+            'total_payroll_records' => PayrollRecord::count(),
+            'latest_run' => $latestRun
+        ]);
     }
 }

@@ -12,11 +12,15 @@ import {
   Filter,
   ChevronUp,
   ChevronDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Eye,
+  History,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EmployeeService from '../services/EmployeeService';
 import DepartmentService from '../services/DepartmentService';
+import PayrollService from '../services/PayrollService';
 import toast from 'react-hot-toast';
 
 const Employees = () => {
@@ -32,6 +36,9 @@ const Employees = () => {
   const [isDeleting, setIsDeleting] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+  const [historyModalEmployee, setHistoryModalEmployee] = useState(null);
+  const [employeeHistory, setEmployeeHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -168,6 +175,23 @@ const Employees = () => {
     setIsModalOpen(true);
   };
 
+  const openHistoryModal = async (emp) => {
+    setHistoryModalEmployee(emp);
+    setLoadingHistory(true);
+    try {
+      const response = await PayrollService.getHistory({ employee_id: emp.id, per_page: 100 });
+      setEmployeeHistory(response.data || []);
+    } catch (err) {
+      toast.error('Failed to load payslip history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const getMonthName = (monthNumber) => {
+    return new Date(0, monthNumber - 1).toLocaleString('default', { month: 'long' });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -256,6 +280,13 @@ const Employees = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => openHistoryModal(emp)}
+                        className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all"
+                        title="View History"
+                      >
+                        <History size={16} />
+                      </button>
                       <button 
                         onClick={() => openEditModal(emp)}
                         className="p-2 rounded-xl bg-primary-500/10 text-primary-400 hover:bg-primary-500 hover:text-white transition-all"
@@ -366,6 +397,73 @@ const Employees = () => {
               <div className="flex flex-col gap-3">
                 <button onClick={() => handleDelete(isDeleting.id)} className="w-full bg-gradient-to-r from-white to-white hover:from-slate-500 hover:to-slate-500 text-slate-950 font-bold py-3.5 rounded-2xl transition-all">Yes, Remove</button>
                 <button onClick={() => setIsDeleting(null)} className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-2xl transition-all">Cancel</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* History Modal */}
+      <AnimatePresence>
+        {historyModalEmployee && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setHistoryModalEmployee(null)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Payslip History</h3>
+                  <p className="text-slate-400 text-xs mt-1">{historyModalEmployee.name}</p>
+                </div>
+                <button onClick={() => setHistoryModalEmployee(null)} className="p-2 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                {loadingHistory ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <Loader2 className="animate-spin text-primary-500" size={32} />
+                    <p className="text-slate-500 text-sm">Loading records...</p>
+                  </div>
+                ) : employeeHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-slate-600 mb-4">
+                      <Calendar size={32} />
+                    </div>
+                    <p className="text-slate-400">No payslips generated yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {employeeHistory.map((record) => (
+                      <div key={record.id} className="group p-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-primary-500/30 rounded-2xl transition-all flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center text-primary-400">
+                            <Calendar size={20} />
+                          </div>
+                          <div>
+                            <p className="text-white font-bold">{getMonthName(record.month)} {record.year}</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Net Pay: ${Number(record.net_pay).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => PayrollService.exportPdf(record.id)}
+                          className="bg-slate-700 hover:bg-white text-white hover:text-slate-950 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                        >
+                          Download PDF
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+                <button 
+                  onClick={() => setHistoryModalEmployee(null)}
+                  className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm transition-all"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
           </div>

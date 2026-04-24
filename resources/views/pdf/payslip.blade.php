@@ -21,12 +21,12 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 2px solid #3498db;
+            border-bottom: 2px solid #00D492;
             padding-bottom: 10px;
         }
         .header h1 {
             margin: 0;
-            color: #3498db;
+            color: #00D492;
             text-transform: uppercase;
             font-size: 24px;
         }
@@ -66,7 +66,7 @@
         }
         .net-pay-box {
             margin-top: 30px;
-            background-color: #3498db;
+            background-color: #00D492;
             color: white;
             padding: 20px;
             text-align: right;
@@ -130,7 +130,7 @@
                     <td class="amount">- {{ number_format($record->epf_employee, 2) }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #777; font-style: italic;">EPF Employer (13%) - Info Only</td>
+                    <td style="color: #777; font-style: italic;">EPF Employer (13%)</td>
                     <td class="amount" style="color: #777; font-style: italic;">{{ number_format($record->epf_employer, 2) }}</td>
                 </tr>
             </tbody>

@@ -10,5 +10,6 @@ export const ENDPOINTS = {
   PAYROLL: "/payroll",
   RUN_PAYROLL: "/payroll/run",
   EXPORT_CSV: "/payroll/export-csv",
+  PAYROLL_STATS: "/payroll/stats",
   EXPORT_PDF: (id) => `/payroll/${id}/pdf`,
 };
